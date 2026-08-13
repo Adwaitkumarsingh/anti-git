@@ -1,0 +1,2555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TimePilot - Smart Study Scheduler</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Monoton&family=Chakra+Petch:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --void: #0a0014;
+      --void-2: #150022;
+      --panel: rgba(19, 8, 34, 0.78);
+      --panel-border: rgba(255, 45, 149, 0.28);
+      --neon-pink: #ff2d95;
+      --neon-cyan: #00e5ff;
+      --neon-purple: #a742ff;
+      --neon-acid: #ccff00;
+      --text-light: #f5eaff;
+      --text-dim: #b6a2d9;
+      --font-display: 'Monoton', cursive;
+      --font-head: 'Chakra Petch', sans-serif;
+      --font-mono: 'Space Mono', monospace;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: var(--font-head);
+      background:
+        radial-gradient(circle at 12% 8%, rgba(255, 45, 149, 0.28), transparent 42%),
+        radial-gradient(circle at 88% 18%, rgba(0, 229, 255, 0.22), transparent 42%),
+        radial-gradient(circle at 50% 95%, rgba(167, 66, 255, 0.25), transparent 50%),
+        linear-gradient(180deg, var(--void) 0%, var(--void-2) 55%, #1a0030 100%);
+      background-attachment: fixed;
+      min-height: 100vh;
+      padding: 20px;
+      color: var(--text-light);
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0, 229, 255, 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 45, 149, 0.07) 1px, transparent 1px);
+      background-size: 42px 42px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes driftGlow {
+      0%   { background-position: 0% 0%, 100% 20%, 40% 100%; }
+      50%  { background-position: 60% 40%, 20% 70%, 90% 30%; }
+      100% { background-position: 0% 0%, 100% 20%, 40% 100%; }
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255, 45, 149, 0.16), transparent 38%),
+        radial-gradient(circle at 80% 30%, rgba(0, 229, 255, 0.14), transparent 38%),
+        radial-gradient(circle at 40% 80%, rgba(167, 66, 255, 0.16), transparent 42%);
+      background-size: 180% 180%;
+      animation: driftGlow 24s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      padding: 25px;
+      border-radius: 12px;
+      border: 1px solid var(--panel-border);
+      box-shadow: 0 0 25px rgba(255, 45, 149, 0.25), 0 0 55px rgba(0, 229, 255, 0.08);
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    @keyframes neonFlicker {
+      0%, 3%, 5%, 8%, 100% { opacity: 1; text-shadow: 0 0 6px var(--neon-pink), 0 0 18px rgba(255, 45, 149, 0.7), 0 0 40px rgba(255, 45, 149, 0.4); }
+      4%, 6% { opacity: 0.65; text-shadow: none; }
+      7% { opacity: 0.9; text-shadow: 0 0 4px var(--neon-pink); }
+    }
+
+    header h1 {
+      font-family: var(--font-display);
+      color: var(--neon-pink);
+      text-shadow: 0 0 6px var(--neon-pink), 0 0 18px rgba(255, 45, 149, 0.7), 0 0 40px rgba(255, 45, 149, 0.4);
+      font-size: 26px;
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 400;
+      animation: neonFlicker 6s infinite;
+    }
+
+    header h1 i {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 6px var(--neon-cyan), 0 0 16px rgba(0, 229, 255, 0.8);
+      font-size: 22px;
+    }
+
+    .header-brand {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .header-tagline {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--neon-cyan);
+      text-shadow: 0 0 6px rgba(0, 229, 255, 0.5);
+      opacity: 0.9;
+    }
+
+    @keyframes boltIconPulse {
+      0%, 100% { opacity: 0.85; text-shadow: 0 0 6px var(--neon-acid), 0 0 12px rgba(204, 255, 0, 0.7); }
+      50% { opacity: 1; text-shadow: 0 0 10px var(--neon-acid), 0 0 20px rgba(204, 255, 0, 0.95); }
+    }
+
+    .bolt-o {
+      position: relative;
+      display: inline-block;
+    }
+
+    .bolt-o .bolt-icon {
+      position: absolute;
+      top: 52%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 0.42em;
+      color: var(--neon-acid);
+      text-shadow: 0 0 6px var(--neon-acid), 0 0 12px rgba(204, 255, 0, 0.7);
+      pointer-events: none;
+      animation: boltIconPulse 2.4s ease-in-out infinite;
+    }
+
+    /* ===== Welcome Boot Sequence ===== */
+    .welcome-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 5000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      background:
+        radial-gradient(circle at 50% 40%, rgba(167, 66, 255, 0.28), transparent 60%),
+        radial-gradient(circle at 20% 80%, rgba(255, 45, 149, 0.18), transparent 50%),
+        rgba(6, 2, 12, 0.97);
+      cursor: pointer;
+      transition: opacity 0.6s ease, visibility 0.6s ease;
+    }
+
+    .welcome-overlay.hide {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .welcome-content {
+      text-align: center;
+      padding: 20px;
+      cursor: default;
+      max-width: 90vw;
+    }
+
+    @keyframes boltRingSpin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes boltRingGlow {
+      0%, 100% { box-shadow: 0 0 20px rgba(0, 229, 255, 0.5), inset 0 0 20px rgba(255, 45, 149, 0.2); }
+      50% { box-shadow: 0 0 36px rgba(0, 229, 255, 0.8), inset 0 0 30px rgba(255, 45, 149, 0.35); }
+    }
+
+    .welcome-bolt-ring {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 28px;
+      border-radius: 50%;
+      border: 2px solid var(--neon-cyan);
+      border-top-color: var(--neon-pink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: boltRingSpin 3s linear infinite, boltRingGlow 2.4s ease-in-out infinite;
+    }
+
+    .welcome-bolt-ring i {
+      font-size: 26px;
+      color: var(--neon-acid);
+      text-shadow: 0 0 10px var(--neon-acid), 0 0 20px rgba(204, 255, 0, 0.7);
+      animation: boltRingSpin 3s linear infinite reverse;
+    }
+
+    .welcome-title {
+      font-family: var(--font-display);
+      font-size: 38px;
+      color: var(--neon-pink);
+      text-shadow: 0 0 8px var(--neon-pink), 0 0 24px rgba(255, 45, 149, 0.6), 0 0 50px rgba(255, 45, 149, 0.3);
+      letter-spacing: 2px;
+      min-height: 1.3em;
+      font-weight: 400;
+    }
+
+    .welcome-subtitle {
+      font-family: var(--font-head);
+      font-size: 16px;
+      color: var(--neon-cyan);
+      text-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
+      margin-top: 16px;
+      letter-spacing: 1px;
+      min-height: 1.4em;
+      text-transform: uppercase;
+    }
+
+    @keyframes cursorBlink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+
+    .typing-cursor {
+      display: inline-block;
+      width: 3px;
+      height: 0.9em;
+      background: var(--neon-cyan);
+      margin-left: 3px;
+      vertical-align: middle;
+      box-shadow: 0 0 8px var(--neon-cyan);
+      animation: cursorBlink 0.8s step-end infinite;
+    }
+
+    .welcome-enter-btn {
+      margin-top: 34px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+    }
+
+    .welcome-hint {
+      margin-top: 14px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .welcome-enter-btn.show,
+    .welcome-hint.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ===== Screen Light-Up Toast ===== */
+    .light-toast {
+      position: fixed;
+      inset: 0;
+      z-index: 4500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .light-toast-flash {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.45), rgba(0, 229, 255, 0.2) 35%, transparent 70%);
+      opacity: 0;
+    }
+
+    @keyframes flashPulse {
+      0% { opacity: 0; }
+      18% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    .light-toast.show .light-toast-flash {
+      animation: flashPulse 0.6s ease-out;
+    }
+
+    .light-toast-card {
+      background: rgba(15, 6, 26, 0.88);
+      border: 2px solid var(--neon-cyan);
+      border-radius: 16px;
+      padding: 26px 46px;
+      text-align: center;
+      box-shadow: 0 0 40px rgba(0, 229, 255, 0.55), 0 0 90px rgba(255, 45, 149, 0.3);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      transform: scale(0.6);
+    }
+
+    @keyframes cardPop {
+      0% { opacity: 0; transform: scale(0.5); }
+      12% { opacity: 1; transform: scale(1.08); }
+      20% { transform: scale(1); }
+      78% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0.92); }
+    }
+
+    .light-toast.show .light-toast-card {
+      animation: cardPop 1.85s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .light-toast-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+      color: var(--neon-acid);
+      text-shadow: 0 0 12px var(--neon-acid), 0 0 24px rgba(204, 255, 0, 0.6);
+    }
+
+    .light-toast-main {
+      font-family: var(--font-display);
+      font-size: 28px;
+      color: var(--neon-pink);
+      text-shadow: 0 0 10px var(--neon-pink), 0 0 26px rgba(255, 45, 149, 0.6);
+      letter-spacing: 1px;
+      max-width: 70vw;
+    }
+
+    .light-toast-sub {
+      margin-top: 10px;
+      font-family: var(--font-head);
+      font-size: 13px;
+      color: var(--neon-cyan);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 15px;
+    }
+
+    button {
+      background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple));
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: var(--font-head);
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 0 12px rgba(255, 45, 149, 0.45);
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+      transform: translateY(-2px);
+      box-shadow: 0 0 22px rgba(0, 229, 255, 0.65);
+    }
+
+    button.secondary {
+      background: transparent;
+      color: var(--neon-cyan);
+      border: 1px solid var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 229, 255, 0.25);
+    }
+
+    button.secondary:hover {
+      background: rgba(0, 229, 255, 0.15);
+      color: #fff;
+      box-shadow: 0 0 18px rgba(0, 229, 255, 0.5);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+      border-bottom: 1px solid var(--panel-border);
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      padding: 15px 25px;
+      border-radius: 12px;
+      border: 1px solid var(--panel-border);
+      box-shadow: 0 0 20px rgba(167, 66, 255, 0.15);
+    }
+
+    .tab-button {
+      padding: 12px 24px;
+      background: transparent;
+      color: var(--text-dim);
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-family: var(--font-head);
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: all 0.3s ease;
+    }
+
+    .tab-button.active {
+      color: var(--neon-cyan);
+      border-bottom-color: var(--neon-cyan);
+      text-shadow: 0 0 8px rgba(0, 229, 255, 0.8);
+    }
+
+    .tab-button:hover {
+      color: var(--neon-pink);
+      transform: none;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: tabFadeIn 0.4s ease;
+    }
+
+    @keyframes tabFadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .dashboard .card {
+      animation: cardRise 0.5s ease backwards;
+    }
+
+    .dashboard .card:nth-child(1) { animation-delay: 0.02s; }
+    .dashboard .card:nth-child(2) { animation-delay: 0.07s; }
+    .dashboard .card:nth-child(3) { animation-delay: 0.12s; }
+    .dashboard .card:nth-child(4) { animation-delay: 0.17s; }
+    .dashboard .card:nth-child(5) { animation-delay: 0.22s; }
+    .dashboard .card:nth-child(6) { animation-delay: 0.27s; }
+    .dashboard .card:nth-child(7) { animation-delay: 0.32s; }
+
+    @keyframes cardRise {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 25px;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      padding: 25px;
+      border-radius: 12px;
+      border: 1px solid var(--panel-border);
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(0, 229, 255, 0.5);
+      box-shadow: 0 0 30px rgba(0, 229, 255, 0.25);
+    }
+
+    .card h2 {
+      color: var(--neon-pink);
+      margin-bottom: 15px;
+      font-size: 17px;
+      font-family: var(--font-head);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: 0 0 6px rgba(255, 45, 149, 0.45);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .input-group {
+      margin-bottom: 15px;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text-dim);
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .input-group input,
+    .input-group select {
+      width: 100%;
+      padding: 10px;
+      background: rgba(8, 3, 16, 0.6);
+      border: 1px solid rgba(167, 66, 255, 0.35);
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: var(--font-mono);
+      color: var(--text-light);
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .input-group input:focus,
+    .input-group select:focus {
+      outline: none;
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+    }
+
+    .badges-container {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      max-height: 420px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .badge-card {
+      background: rgba(8, 3, 16, 0.6);
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(167, 66, 255, 0.25);
+      opacity: 0.45;
+    }
+
+    .badge-card:hover {
+      transform: scale(1.05);
+      border-color: var(--neon-cyan);
+    }
+
+    .badge-card.unlocked {
+      background: linear-gradient(135deg, rgba(255, 45, 149, 0.25), rgba(0, 229, 255, 0.2));
+      border-color: var(--neon-acid);
+      box-shadow: 0 0 18px rgba(204, 255, 0, 0.35);
+      opacity: 1;
+    }
+
+    .badge-icon {
+      font-size: 34px;
+      margin-bottom: 10px;
+    }
+
+    .badge-name {
+      font-weight: 700;
+      color: var(--text-light);
+      margin-bottom: 5px;
+      font-family: var(--font-head);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-status {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-weight: 600;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+
+    .timetable {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .day-slot {
+      background: rgba(8, 3, 16, 0.6);
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      border-left: 3px solid var(--neon-cyan);
+      border-top: 1px solid rgba(167, 66, 255, 0.2);
+      border-right: 1px solid rgba(167, 66, 255, 0.2);
+      border-bottom: 1px solid rgba(167, 66, 255, 0.2);
+    }
+
+    .day-slot strong {
+      display: block;
+      color: var(--neon-cyan);
+      margin-bottom: 5px;
+      font-family: var(--font-head);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .day-slot small {
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+    }
+
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(167, 66, 255, 0.18);
+      color: var(--text-dim);
+      font-size: 14px;
+    }
+
+    .stat:last-child {
+      border-bottom: none;
+    }
+
+    .stat-value {
+      color: var(--neon-acid);
+      font-weight: 700;
+      font-size: 15px;
+      font-family: var(--font-mono);
+      text-shadow: 0 0 6px rgba(204, 255, 0, 0.5);
+      display: inline-block;
+    }
+
+    @keyframes statPop {
+      0% { transform: scale(1); }
+      35% { transform: scale(1.35); text-shadow: 0 0 14px var(--neon-acid), 0 0 26px rgba(204, 255, 0, 0.7); }
+      100% { transform: scale(1); }
+    }
+
+    .stat-value.pop {
+      animation: statPop 0.45s ease;
+    }
+
+    .focus-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 50% 40%, rgba(167, 66, 255, 0.25), transparent 60%), rgba(6, 2, 12, 0.96);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    .focus-overlay:not(.hidden) {
+      display: flex;
+    }
+
+    .focus-overlay.hidden {
+      display: none;
+    }
+
+    .focus-content {
+      text-align: center;
+      color: var(--text-light);
+      font-family: var(--font-head);
+    }
+
+    .focus-timer-display {
+      font-size: 120px;
+      font-weight: bold;
+      color: var(--neon-cyan);
+      margin: 30px 0;
+      font-family: var(--font-mono);
+      text-shadow: 0 0 15px var(--neon-cyan), 0 0 40px rgba(0, 229, 255, 0.6);
+    }
+
+    .focus-controls {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-top: 30px;
+    }
+
+    .focus-controls button {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      font-size: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0;
+    }
+
+    .focus-quit {
+      background: linear-gradient(135deg, #ff2d95, #ff5252) !important;
+    }
+
+    .focus-quit:hover {
+      background: #ff2d95 !important;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(6, 2, 12, 0.85);
+      backdrop-filter: blur(4px);
+      z-index: 999;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #120823;
+      padding: 30px;
+      border-radius: 12px;
+      border: 1px solid var(--panel-border);
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 0 45px rgba(167, 66, 255, 0.4);
+      max-height: 80vh;
+      overflow-y: auto;
+      color: var(--text-light);
+    }
+
+    .modal-content h2 {
+      color: var(--neon-pink);
+      margin-bottom: 20px;
+      font-family: var(--font-head);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: 0 0 6px rgba(255, 45, 149, 0.4);
+    }
+
+    .modal-content .form-group {
+      margin-bottom: 15px;
+    }
+
+    .modal-content .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text-dim);
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .modal-content .form-group input,
+    .modal-content .form-group select {
+      width: 100%;
+      padding: 10px;
+      background: rgba(8, 3, 16, 0.6);
+      border: 1px solid rgba(167, 66, 255, 0.35);
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: var(--font-mono);
+      color: var(--text-light);
+    }
+
+    .modal-content .form-group input:focus,
+    .modal-content .form-group select:focus {
+      outline: none;
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+
+    .modal-actions button {
+      flex: 1;
+    }
+
+    .streak-display {
+      font-size: 36px;
+      color: var(--neon-acid);
+      font-weight: bold;
+      margin: 15px 0;
+      text-align: center;
+      font-family: var(--font-mono);
+      text-shadow: 0 0 10px rgba(204, 255, 0, 0.5);
+    }
+
+    .info-box {
+      background: rgba(167, 66, 255, 0.1);
+      border-left: 4px solid var(--neon-purple);
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 15px;
+      color: var(--text-dim);
+      font-size: 14px;
+    }
+
+    .ai-credit {
+      margin-top: 10px;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--neon-cyan);
+      text-shadow: 0 0 6px rgba(0, 229, 255, 0.4);
+      border-left: 2px dashed rgba(0, 229, 255, 0.4);
+    }
+
+    .ai-credit i {
+      margin-right: 4px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      margin: 10px 0;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--neon-pink), var(--neon-cyan));
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
+      transition: width 0.3s ease;
+    }
+
+    .chart-placeholder {
+      background: rgba(8, 3, 16, 0.6);
+      border: 1px solid rgba(167, 66, 255, 0.2);
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      color: var(--text-dim);
+      margin-top: 15px;
+    }
+
+    .school-timetable {
+      background: rgba(8, 3, 16, 0.6);
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 15px;
+      overflow-x: auto;
+    }
+
+    .school-schedule-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .class-slot {
+      background: linear-gradient(135deg, var(--neon-pink) 0%, var(--neon-purple) 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 0 15px rgba(255, 45, 149, 0.35);
+    }
+
+    .class-slot-time {
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 8px;
+      opacity: 0.9;
+    }
+
+    .class-slot-subject {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .class-slot-teacher {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    .generated-schedule {
+      background: rgba(0, 229, 255, 0.06);
+      border-left: 4px solid var(--neon-cyan);
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 15px;
+    }
+
+    .schedule-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(167, 66, 255, 0.18);
+    }
+
+    .schedule-item:last-child {
+      border-bottom: none;
+    }
+
+    .schedule-time {
+      font-weight: 700;
+      color: var(--neon-acid);
+      min-width: 100px;
+      font-family: var(--font-mono);
+      text-shadow: 0 0 6px rgba(204, 255, 0, 0.4);
+    }
+
+    .schedule-activity {
+      color: var(--text-light);
+    }
+
+    .schedule-duration {
+      color: var(--text-dim);
+      font-size: 12px;
+      min-width: 80px;
+      text-align: right;
+      font-family: var(--font-mono);
+    }
+
+    .institution-card {
+      background: rgba(8, 3, 16, 0.6);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border-left: 4px solid var(--neon-pink);
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .institution-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .institution-name {
+      font-weight: 700;
+      color: var(--neon-cyan);
+      font-size: 16px;
+      font-family: var(--font-head);
+    }
+
+    .institution-time {
+      color: var(--text-dim);
+      font-size: 13px;
+      font-family: var(--font-mono);
+    }
+
+    .remove-btn {
+      background: linear-gradient(135deg, #ff2d95, #ff5252) !important;
+      padding: 6px 12px;
+      font-size: 12px;
+      box-shadow: 0 0 10px rgba(255, 45, 149, 0.4);
+    }
+
+    .remove-btn:hover {
+      background: #ff2d95 !important;
+      box-shadow: 0 0 18px rgba(255, 45, 149, 0.6);
+    }
+
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+      }
+
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+
+      .focus-timer-display {
+        font-size: 80px;
+      }
+
+      .header-actions {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .badges-container {
+        grid-template-columns: 1fr;
+      }
+
+      .tabs {
+        flex-wrap: wrap;
+      }
+
+      .tab-button {
+        padding: 10px 16px;
+        font-size: 13px;
+      }
+    }
+
+    @media print {
+      body {
+        background: white !important;
+        padding: 0;
+        color: #222 !important;
+      }
+
+      body::before {
+        display: none;
+      }
+
+      .header-actions,
+      button,
+      .modal,
+      .tabs {
+        display: none;
+      }
+
+      .dashboard {
+        gap: 15px;
+      }
+
+      .card, header, .institution-card, .generated-schedule, .day-slot, .badge-card, .info-box {
+        background: #f8f8f8 !important;
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+        color: #222 !important;
+      }
+
+      .card h2, header h1, .institution-name, .day-slot strong, .badge-name,
+      .schedule-time, .stat-value, .streak-display {
+        color: #444 !important;
+        text-shadow: none !important;
+      }
+
+      .card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Welcome Boot Sequence -->
+  <div class="welcome-overlay" id="welcomeOverlay" onclick="dismissWelcome()">
+    <div class="welcome-content">
+      <div class="welcome-bolt-ring">
+        <i class="fas fa-bolt"></i>
+      </div>
+      <h2 class="welcome-title"><span id="welcomeLine1"></span><span class="typing-cursor" id="welcomeCursor1"></span></h2>
+      <p class="welcome-subtitle"><span id="welcomeLine2"></span><span class="typing-cursor" id="welcomeCursor2" style="display:none;"></span></p>
+      <button class="welcome-enter-btn" id="welcomeEnterBtn" onclick="dismissWelcome()">
+        <i class="fas fa-bolt"></i> Enter TimePilot
+      </button>
+      <div class="welcome-hint">or click anywhere to continue</div>
+    </div>
+  </div>
+
+  <!-- Screen Light-Up Toast (Nice! / Good Work! moments) -->
+  <div class="light-toast" id="lightToast">
+    <div class="light-toast-flash"></div>
+    <div class="light-toast-card">
+      <div class="light-toast-icon">⚡</div>
+      <div class="light-toast-main" id="lightToastMain"></div>
+      <div class="light-toast-sub" id="lightToastSub"></div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="header-brand">
+        <h1><i class="fas fa-clock"></i> TimePil<span class="bolt-o">o<i class="fas fa-bolt bolt-icon"></i></span>t</h1>
+        <p class="header-tagline">🚀 TIMEPILOT — PLAN SMARTER. FOCUS BETTER. OWN YOUR TIME.</p>
+      </div>
+      <div class="header-actions">
+        <button onclick="openSettingsModal()"><i class="fas fa-cog"></i> Settings</button>
+        <button class="secondary" onclick="triggerPrintPDF()"><i class="fas fa-print"></i> Export PDF</button>
+      </div>
+    </header>
+
+    <!-- Tabs Navigation -->
+    <div class="tabs">
+      <button class="tab-button active" onclick="switchTab('dashboard', event)">
+        <i class="fas fa-th-large"></i> Dashboard
+      </button>
+      <button class="tab-button" onclick="switchTab('school', event)">
+        <i class="fas fa-school"></i> School/Academy
+      </button>
+      <button class="tab-button" onclick="switchTab('generated', event)">
+        <i class="fas fa-calendar-check"></i> Generated Timetable
+      </button>
+    </div>
+
+    <!-- Dashboard Tab -->
+    <div id="dashboard" class="tab-content active">
+      <div class="dashboard">
+        <!-- Quick Stats Card -->
+        <div class="card">
+          <h2><i class="fas fa-chart-line"></i> Quick Stats</h2>
+          <div class="stat">
+            <span>📈 Current Streak</span>
+            <span class="stat-value" id="streakDisplay">0 days</span>
+          </div>
+          <div class="stat">
+            <span>⏰ Wake Time</span>
+            <span class="stat-value" id="wakeTimeDisplay">7:00 AM</span>
+          </div>
+          <div class="stat">
+            <span>🎯 Study Target</span>
+            <span class="stat-value" id="studyTargetDisplay">0 hrs</span>
+          </div>
+          <div class="stat">
+            <span>😴 Sleep Hours</span>
+            <span class="stat-value" id="sleepHoursDisplay">0 hrs</span>
+          </div>
+          <button style="margin-top: 15px; width: 100%;" onclick="logTodaySession(event)">
+            <i class="fas fa-check-circle"></i> Log Today's Session
+          </button>
+        </div>
+
+        <!-- Badges Card -->
+        <div class="card">
+          <h2><i class="fas fa-trophy"></i> Achievements</h2>
+          <div class="badges-container">
+            <div class="badge-card" id="badgeEarlyBird">
+              <div class="badge-icon">🌅</div>
+              <div class="badge-name">Early Bird</div>
+              <div class="badge-status" id="tagEarlyBird">Locked</div>
+            </div>
+            <div class="badge-card" id="badgeStreak">
+              <div class="badge-icon">🔥</div>
+              <div class="badge-name">On Fire</div>
+              <div class="badge-status" id="tagStreak">Locked</div>
+            </div>
+            <div class="badge-card" id="badgeMaster">
+              <div class="badge-icon">🎓</div>
+              <div class="badge-name">Study Master</div>
+              <div class="badge-status" id="tagMaster">Locked</div>
+            </div>
+            <div class="badge-card" id="badgeBalanced">
+              <div class="badge-icon">⚖️</div>
+              <div class="badge-name">Balanced Life</div>
+              <div class="badge-status" id="tagBalanced">Locked</div>
+            </div>
+            <div class="badge-card" id="badgeNightOwl">
+              <div class="badge-icon">🌙</div>
+              <div class="badge-name">Night Owl</div>
+              <div class="badge-status" id="tagNightOwl">Locked</div>
+            </div>
+            <div class="badge-card" id="badgeConsistency">
+              <div class="badge-icon">📅</div>
+              <div class="badge-name">Consistency King</div>
+              <div class="badge-status" id="tagConsistency">Locked</div>
+            </div>
+            <div class="badge-card" id="badgeMarathoner">
+              <div class="badge-icon">⏳</div>
+              <div class="badge-name">Marathoner</div>
+              <div class="badge-status" id="tagMarathoner">Locked</div>
+            </div>
+            <div class="badge-card" id="badgeWellRested">
+              <div class="badge-icon">🧘</div>
+              <div class="badge-name">Well Rested</div>
+              <div class="badge-status" id="tagWellRested">Locked</div>
+            </div>
+            <div class="badge-card" id="badgeOverachiever">
+              <div class="badge-icon">🚀</div>
+              <div class="badge-name">Overachiever</div>
+              <div class="badge-status" id="tagOverachiever">Locked</div>
+            </div>
+            <div class="badge-card" id="badgeScholar">
+              <div class="badge-icon">📖</div>
+              <div class="badge-name">Multi-Tasker</div>
+              <div class="badge-status" id="tagScholar">Locked</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Focus Timer Card -->
+        <div class="card">
+          <h2><i class="fas fa-bolt"></i> Focus Timer</h2>
+          <div class="info-box">
+            <strong>Ready to focus?</strong> Click the button below to start a distraction-free study session.
+          </div>
+          <button style="margin-top: 15px; width: 100%;" onclick="toggleFocusMode()">
+            <i class="fas fa-play"></i> Start Focus Session
+          </button>
+        </div>
+
+        <!-- Weekly Schedule Card -->
+        <div class="card">
+          <h2><i class="fas fa-calendar-alt"></i> Weekly Schedule</h2>
+          <div class="timetable" id="timetableContainer">
+            <div class="day-slot">
+              <strong>Mon</strong>
+              <small id="mon-hours">8 hrs</small>
+            </div>
+            <div class="day-slot">
+              <strong>Tue</strong>
+              <small id="tue-hours">8 hrs</small>
+            </div>
+            <div class="day-slot">
+              <strong>Wed</strong>
+              <small id="wed-hours">8 hrs</small>
+            </div>
+            <div class="day-slot">
+              <strong>Thu</strong>
+              <small id="thu-hours">8 hrs</small>
+            </div>
+            <div class="day-slot">
+              <strong>Fri</strong>
+              <small id="fri-hours">8 hrs</small>
+            </div>
+            <div class="day-slot">
+              <strong>Sat</strong>
+              <small id="sat-hours">6 hrs</small>
+            </div>
+            <div class="day-slot">
+              <strong>Sun</strong>
+              <small id="sun-hours">6 hrs</small>
+            </div>
+          </div>
+          <button style="margin-top: 15px; width: 100%;" onclick="openTimetableModal()">
+            <i class="fas fa-edit"></i> Edit Schedule
+          </button>
+        </div>
+
+        <!-- Study Targets Card -->
+        <div class="card">
+          <h2><i class="fas fa-bullseye"></i> Study Goals</h2>
+          <div class="input-group">
+            <label>Daily Study Target (hours)</label>
+            <input type="number" id="studyTargetInput" min="1" max="16" value="4" placeholder="Enter hours">
+          </div>
+          <div class="stat">
+            <span>Your Goal</span>
+            <span class="stat-value" id="goalDisplay">4 hour/day</span>
+          </div>
+          <button style="width: 100%; margin-top: 15px;" onclick="updateStudyTarget()">
+            <i class="fas fa-save"></i> Save Target
+          </button>
+        </div>
+
+        <!-- Preferences Card -->
+        <div class="card">
+          <h2><i class="fas fa-sliders-h"></i> Preferences</h2>
+          <div class="input-group">
+            <label>Wake Up Time</label>
+            <input type="time" id="wakeTimeInput" value="07:00">
+          </div>
+          <div class="input-group">
+            <label>Focus Session Length (minutes)</label>
+            <input type="number" id="sessionLengthInput" min="15" max="120" value="25" placeholder="25">
+          </div>
+          <button style="width: 100%; margin-top: 15px;" onclick="savePreferences()">
+            <i class="fas fa-check"></i> Save Preferences
+          </button>
+        </div>
+
+        <!-- Today's Progress Card -->
+        <div class="card">
+          <h2><i class="fas fa-tasks"></i> Today's Progress</h2>
+          <div class="stat">
+            <span>Hours Studied Today</span>
+            <span class="stat-value" id="todayHours">0 hrs</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+          </div>
+          <small id="progressText" style="color: var(--text-dim); font-family: var(--font-mono);">0 hrs of 4 hrs completed</small>
+          <button style="width: 100%; margin-top: 15px;" onclick="addStudyHour()">
+            <i class="fas fa-plus"></i> Add 1 Hour
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- School/Academy Tab -->
+    <div id="school" class="tab-content">
+      <div class="dashboard">
+        <div class="card" style="grid-column: 1 / -1;">
+          <h2><i class="fas fa-school"></i> My Institutions</h2>
+          <div class="info-box">
+            <strong>Add your school/academy schedule</strong> to automatically generate a personalized study timetable that works around your class timings.
+          </div>
+
+          <div id="institutionsList"></div>
+
+          <button style="margin-top: 15px; width: 100%;" onclick="openAddInstitutionModal()">
+            <i class="fas fa-plus"></i> Add School/Academy
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Generated Timetable Tab -->
+    <div id="generated" class="tab-content">
+      <div class="dashboard">
+        <div class="card" style="grid-column: 1 / -1;">
+          <h2><i class="fas fa-calendar-check"></i> Your Personalized Timetable</h2>
+          <div class="info-box">
+            <strong>This timetable is generated</strong> based on your school/academy timings, sleep requirements, and study goals. It optimizes your daily schedule for maximum productivity.
+          </div>
+          <div class="ai-credit">
+            <i class="fas fa-robot"></i> Crafted by your <strong>Smart Fit AI Assistant</strong> — trained to fit your study time around real life, not the other way around.
+          </div>
+
+          <div id="smartFitBanner" style="display: none; margin-top: 15px;"></div>
+
+          <div id="generatedScheduleContainer" class="generated-schedule" style="display: none;">
+            <!-- Schedule will be generated here -->
+          </div>
+
+          <div id="noScheduleMessage" class="info-box" style="background: rgba(255, 45, 149, 0.08); border-left-color: var(--neon-pink); color: var(--text-light); margin-top: 30px;">
+            <strong>⚠️ No Schedule Generated Yet</strong><br>
+            Add your school/academy details in the "School/Academy" tab to generate your personalized timetable.
+          </div>
+
+          <button id="regenerateBtn" style="margin-top: 15px; width: 100%; display: none;" onclick="generateTimetable()">
+            <i class="fas fa-sync-alt"></i> Regenerate Schedule
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Focus Mode Overlay -->
+  <div class="focus-overlay hidden" id="focusOverlay">
+    <div class="focus-content">
+      <h1 style="font-size: 48px; margin-bottom: 20px;">🎯 Focus Time</h1>
+      <p style="font-size: 20px; margin-bottom: 30px;">Eliminate distractions. Get things done.</p>
+      <div class="focus-timer-display" id="focusTimerDisplay">25:00</div>
+      <div class="focus-controls">
+        <button onclick="toggleFocusTimer()">
+          <i class="fas fa-play" id="focusPlayIcon"></i>
+        </button>
+        <button class="focus-quit" onclick="toggleFocusMode()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal" id="settingsModal">
+    <div class="modal-content">
+      <h2><i class="fas fa-cog"></i> Settings</h2>
+      <div class="form-group">
+        <label>Daily Study Target (hours)</label>
+        <input type="number" id="modalStudyTarget" min="1" max="16" value="4">
+      </div>
+      <div class="form-group">
+        <label>Wake Up Time</label>
+        <input type="time" id="modalWakeTime" value="07:00">
+      </div>
+      <div class="form-group">
+        <label>Focus Session Length (minutes)</label>
+        <input type="number" id="modalSessionLength" min="15" max="120" value="25">
+      </div>
+      <div class="modal-actions">
+        <button class="secondary" onclick="closeModal('settingsModal')">Cancel</button>
+        <button onclick="saveSettingsModal()">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Institution Modal -->
+  <div class="modal" id="addInstitutionModal">
+    <div class="modal-content">
+      <h2 id="institutionModalTitle"><i class="fas fa-school"></i> Add School/Academy</h2>
+      <div class="form-group">
+        <label>Institution Name</label>
+        <input type="text" id="institutionName" placeholder="e.g., XYZ High School">
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select id="institutionType">
+          <option value="school">School</option>
+          <option value="academy">Academy/Coaching</option>
+          <option value="college">College</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>School Start Time</label>
+        <input type="time" id="schoolStartTime" value="09:00">
+      </div>
+      <div class="form-group">
+        <label>School End Time</label>
+        <input type="time" id="schoolEndTime" value="15:00">
+      </div>
+      <div class="form-group">
+        <label>Travel Time Each Way (minutes)</label>
+        <input type="number" id="institutionTravelTime" min="0" max="180" step="5" value="20" placeholder="e.g., 20">
+      </div>
+      <div class="form-group">
+        <label>Working Days (Select all)</label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+          <label><input type="checkbox" value="Mon" class="workday-check"> Monday</label>
+          <label><input type="checkbox" value="Tue" class="workday-check"> Tuesday</label>
+          <label><input type="checkbox" value="Wed" class="workday-check"> Wednesday</label>
+          <label><input type="checkbox" value="Thu" class="workday-check"> Thursday</label>
+          <label><input type="checkbox" value="Fri" class="workday-check"> Friday</label>
+          <label><input type="checkbox" value="Sat" class="workday-check"> Saturday</label>
+          <label><input type="checkbox" value="Sun" class="workday-check"> Sunday</label>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="secondary" onclick="closeModal('addInstitutionModal')">Cancel</button>
+        <button id="institutionSubmitBtn" onclick="addInstitution()">Add Institution</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timetable Edit Modal -->
+  <div class="modal" id="timetableModal">
+    <div class="modal-content">
+      <h2><i class="fas fa-calendar-alt"></i> Edit Weekly Schedule</h2>
+      <div class="form-group">
+        <label>Monday Study Hours</label>
+        <input type="number" id="monInput" min="0" max="16" value="8" step="0.5">
+      </div>
+      <div class="form-group">
+        <label>Tuesday Study Hours</label>
+        <input type="number" id="tueInput" min="0" max="16" value="8" step="0.5">
+      </div>
+      <div class="form-group">
+        <label>Wednesday Study Hours</label>
+        <input type="number" id="wedInput" min="0" max="16" value="8" step="0.5">
+      </div>
+      <div class="form-group">
+        <label>Thursday Study Hours</label>
+        <input type="number" id="thuInput" min="0" max="16" value="8" step="0.5">
+      </div>
+      <div class="form-group">
+        <label>Friday Study Hours</label>
+        <input type="number" id="friInput" min="0" max="16" value="8" step="0.5">
+      </div>
+      <div class="form-group">
+        <label>Saturday Study Hours</label>
+        <input type="number" id="satInput" min="0" max="16" value="6" step="0.5">
+      </div>
+      <div class="form-group">
+        <label>Sunday Study Hours</label>
+        <input type="number" id="sunInput" min="0" max="16" value="6" step="0.5">
+      </div>
+      <div class="modal-actions">
+        <button class="secondary" onclick="closeModal('timetableModal')">Cancel</button>
+        <button onclick="saveTimetable()">Save Schedule</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Smart Fit Assistant Modal -->
+  <div class="modal" id="smartFitModal">
+    <div class="modal-content">
+      <h2><i class="fas fa-wand-magic-sparkles"></i> Smart Fit Assistant</h2>
+      <div class="info-box" id="smartFitSummary" style="margin-top: 0;">
+        Adjust the values below — the preview updates live so you can see exactly what fits before you commit.
+      </div>
+      <div class="form-group">
+        <label>Wake Up Time</label>
+        <input type="time" id="fitWakeTime" oninput="updateSmartFitPreview()">
+      </div>
+      <div class="form-group">
+        <label>Sleep Hours (7–9 recommended)</label>
+        <input type="number" id="fitSleepHours" min="4" max="12" step="0.5" oninput="updateSmartFitPreview()">
+      </div>
+      <div class="form-group">
+        <label>Daily Study Target (hours) — applies to every day</label>
+        <input type="number" id="fitStudyTarget" min="0.5" max="16" step="0.5" oninput="updateSmartFitPreview()">
+      </div>
+      <div id="fitPreviewList" style="margin-top: 10px; border-top: 1px solid rgba(167,66,255,0.2); padding-top: 10px;"></div>
+      <div class="modal-actions">
+        <button class="secondary" onclick="closeModal('smartFitModal')">Cancel</button>
+        <button onclick="applySmartFit()">Apply &amp; Regenerate</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize APP_STATE
+    const APP_STATE = {
+      data: {
+        preferences: {
+          wakeTime: '07:00',
+          studyTarget: 4,
+          sessionLength: 25,
+          sleepHours: 8
+        },
+        timetable: {
+          Mon: { studyHours: 8, sleepHours: 7 },
+          Tue: { studyHours: 8, sleepHours: 7 },
+          Wed: { studyHours: 8, sleepHours: 7 },
+          Thu: { studyHours: 8, sleepHours: 7 },
+          Fri: { studyHours: 8, sleepHours: 7 },
+          Sat: { studyHours: 6, sleepHours: 8 },
+          Sun: { studyHours: 6, sleepHours: 8 }
+        },
+        institutions: []
+      },
+      streak: 0,
+      todayHours: 0,
+      bestDayHours: 0,
+      wellRestedStreak: 0,
+      lastSessionWasLate: false,
+      generatedTimetable: {
+        Mon: { sleepHours: 7 },
+        Tue: { sleepHours: 7 },
+        Wed: { sleepHours: 7 },
+        Thu: { sleepHours: 7 },
+        Fri: { sleepHours: 7 },
+        Sat: { sleepHours: 8 },
+        Sun: { sleepHours: 8 }
+      },
+      focusTimer: {
+        timerId: null,
+        secondsLeft: 0,
+        isPaused: false
+      },
+      generatedSchedule: null,
+      uiInitialized: false
+    };
+
+    // Load data on page load
+    window.addEventListener('load', () => {
+      loadStateFromLocalStorage();
+      updateUIFromState();
+      evaluateBadges();
+      APP_STATE.uiInitialized = true;
+      renderInstitutions();
+      if (APP_STATE.data.institutions.length > 0) {
+        generateTimetable();
+      }
+      runWelcomeSequence();
+    });
+
+    // ==================== Welcome Boot Sequence ====================
+    function typeText(el, text, speed) {
+      return new Promise(resolve => {
+        let i = 0;
+        el.textContent = '';
+        const interval = setInterval(() => {
+          el.textContent += text[i];
+          i++;
+          if (i >= text.length) {
+            clearInterval(interval);
+            resolve();
+          }
+        }, speed);
+      });
+    }
+
+    let welcomeSkipped = false;
+
+    async function runWelcomeSequence() {
+      const line1El = document.getElementById('welcomeLine1');
+      const line2El = document.getElementById('welcomeLine2');
+      const cursor1 = document.getElementById('welcomeCursor1');
+      const cursor2 = document.getElementById('welcomeCursor2');
+      const btn = document.getElementById('welcomeEnterBtn');
+      const hint = document.querySelector('.welcome-hint');
+
+      if (welcomeSkipped) return;
+      await typeText(line1El, 'Welcome, Friend.', 55);
+      if (welcomeSkipped) return;
+
+      cursor1.style.display = 'none';
+      cursor2.style.display = 'inline-block';
+      await new Promise(r => setTimeout(r, 300));
+      if (welcomeSkipped) return;
+
+      await typeText(line2El, 'How can I help you today?', 32);
+      cursor2.style.display = 'none';
+
+      btn.classList.add('show');
+      hint.classList.add('show');
+    }
+
+    function dismissWelcome() {
+      welcomeSkipped = true;
+      const overlay = document.getElementById('welcomeOverlay');
+      if (!overlay || overlay.classList.contains('hide')) return;
+      overlay.classList.add('hide');
+      setTimeout(() => {
+        overlay.style.display = 'none';
+      }, 650);
+    }
+
+    // ==================== Screen Light-Up Toast ====================
+    // A brief full-screen flash + glowing message card, used for celebratory
+    // moments: saving credentials/settings ("Nice!") and study milestones
+    // ("Good Work, Keep It Up Champ!"). Non-blocking — the app stays usable
+    // underneath it, unlike a native alert().
+    let lightToastTimeout = null;
+
+    function showLightToast(mainText, subText) {
+      const toast = document.getElementById('lightToast');
+      const mainEl = document.getElementById('lightToastMain');
+      const subEl = document.getElementById('lightToastSub');
+      if (!toast || !mainEl || !subEl) return;
+
+      mainEl.textContent = mainText;
+      subEl.textContent = subText || '';
+      subEl.style.display = subText ? 'block' : 'none';
+
+      // Restart the animation even if a toast is already showing
+      toast.classList.remove('show');
+      void toast.offsetWidth; // force reflow
+      toast.classList.add('show');
+
+      if (lightToastTimeout) clearTimeout(lightToastTimeout);
+      lightToastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 1900);
+    }
+
+    // ==================== Tab Navigation ====================
+    function switchTab(tabName, evt) {
+      const contents = document.querySelectorAll('.tab-content');
+      const buttons = document.querySelectorAll('.tab-button');
+      
+      contents.forEach(content => content.classList.remove('active'));
+      buttons.forEach(btn => btn.classList.remove('active'));
+      
+      document.getElementById(tabName).classList.add('active');
+      if (evt) {
+        evt.target.closest('.tab-button').classList.add('active');
+      } else {
+        const fallbackBtn = Array.from(buttons).find(btn => btn.getAttribute('onclick').includes(`'${tabName}'`));
+        if (fallbackBtn) fallbackBtn.classList.add('active');
+      }
+
+      if (tabName === 'generated' && APP_STATE.generatedSchedule) {
+        showLightToast("Don't Back Down Now!", 'Your Smart Fit AI Assistant has a plan for you');
+      }
+    }
+
+    // ==================== Utility Functions ====================
+    function timeToMins(timeStr) {
+      const [h, m] = timeStr.split(':').map(Number);
+      return h * 60 + m;
+    }
+
+    function minsToTime(mins) {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+
+    function updateUI() {
+      updateUIFromState();
+      evaluateBadges();
+      saveStateToLocalStorage();
+    }
+
+    function updateUIFromState() {
+      // Update quick stats
+      document.getElementById('streakDisplay').innerText = `${APP_STATE.streak} days`;
+      document.getElementById('wakeTimeDisplay').innerText = formatTime(APP_STATE.data.preferences.wakeTime);
+      document.getElementById('studyTargetDisplay').innerText = `${APP_STATE.data.preferences.studyTarget} hrs`;
+      document.getElementById('sleepHoursDisplay').innerText = `${APP_STATE.data.preferences.sleepHours} hrs`;
+      document.getElementById('goalDisplay').innerText = `${APP_STATE.data.preferences.studyTarget} hour${APP_STATE.data.preferences.studyTarget !== 1 ? 's' : ''}/day`;
+      
+      // Update today's progress
+      document.getElementById('todayHours').innerText = `${APP_STATE.todayHours} hrs`;
+      const percentage = (APP_STATE.todayHours / APP_STATE.data.preferences.studyTarget) * 100;
+      document.getElementById('progressFill').style.width = Math.min(percentage, 100) + '%';
+      document.getElementById('progressText').innerText = `${APP_STATE.todayHours} hrs of ${APP_STATE.data.preferences.studyTarget} hrs completed`;
+
+      // Update timetable display
+      document.getElementById('mon-hours').innerText = `${APP_STATE.data.timetable.Mon.studyHours} hrs`;
+      document.getElementById('tue-hours').innerText = `${APP_STATE.data.timetable.Tue.studyHours} hrs`;
+      document.getElementById('wed-hours').innerText = `${APP_STATE.data.timetable.Wed.studyHours} hrs`;
+      document.getElementById('thu-hours').innerText = `${APP_STATE.data.timetable.Thu.studyHours} hrs`;
+      document.getElementById('fri-hours').innerText = `${APP_STATE.data.timetable.Fri.studyHours} hrs`;
+      document.getElementById('sat-hours').innerText = `${APP_STATE.data.timetable.Sat.studyHours} hrs`;
+      document.getElementById('sun-hours').innerText = `${APP_STATE.data.timetable.Sun.studyHours} hrs`;
+
+      // Update input fields
+      document.getElementById('wakeTimeInput').value = APP_STATE.data.preferences.wakeTime;
+      document.getElementById('sessionLengthInput').value = APP_STATE.data.preferences.sessionLength;
+      document.getElementById('studyTargetInput').value = APP_STATE.data.preferences.studyTarget;
+    }
+
+    function formatTime(timeStr) {
+      const [h, m] = timeStr.split(':').map(Number);
+      const period = h >= 12 ? 'PM' : 'AM';
+      const displayH = h % 12 || 12;
+      return `${displayH}:${String(m).padStart(2, '0')} ${period}`;
+    }
+
+    // Same as formatTime, but takes minutes-since-midnight (handles values that have
+    // rolled past 1440 or gone negative, which the schedule generator can produce).
+    function formatMinsAMPM(mins) {
+      const norm = ((mins % 1440) + 1440) % 1440;
+      const h = Math.floor(norm / 60);
+      const m = norm % 60;
+      const period = h >= 12 ? 'PM' : 'AM';
+      const displayH = h % 12 || 12;
+      return `${displayH}:${String(m).padStart(2, '0')} ${period}`;
+    }
+
+    // ==================== Badge Functions ====================
+    function evaluateBadges() {
+      const wakeM = timeToMins(APP_STATE.data.preferences.wakeTime);
+      updateBadge('badgeEarlyBird', 'tagEarlyBird', wakeM <= 420);
+      updateBadge('badgeStreak', 'tagStreak', APP_STATE.streak >= 1);
+      updateBadge('badgeMaster', 'tagMaster', APP_STATE.data.preferences.studyTarget >= 4);
+      updateBadge('badgeBalanced', 'tagBalanced', APP_STATE.data.preferences.sleepHours >= 7);
+      updateBadge('badgeNightOwl', 'tagNightOwl', !!APP_STATE.lastSessionWasLate);
+      updateBadge('badgeConsistency', 'tagConsistency', APP_STATE.streak >= 7);
+      updateBadge('badgeMarathoner', 'tagMarathoner', APP_STATE.bestDayHours >= 3);
+      updateBadge('badgeWellRested', 'tagWellRested', APP_STATE.wellRestedStreak >= 5);
+      updateBadge('badgeOverachiever', 'tagOverachiever', APP_STATE.todayHours >= APP_STATE.data.preferences.studyTarget && APP_STATE.data.preferences.studyTarget > 0);
+      updateBadge('badgeScholar', 'tagScholar', APP_STATE.data.institutions.length >= 2);
+    }
+
+    function updateBadge(cId, tId, unlocked) {
+      const card = document.getElementById(cId), tag = document.getElementById(tId);
+      const wasUnlocked = card.classList.contains('unlocked');
+      card.style.opacity = unlocked ? '1' : '0.4';
+      card.classList.toggle('unlocked', unlocked);
+      card.classList.toggle('locked', !unlocked);
+      tag.innerText = unlocked ? 'Unlocked' : 'Locked';
+
+      if (unlocked && !wasUnlocked && APP_STATE.uiInitialized) {
+        const rect = card.getBoundingClientRect();
+        celebrate(rect.left + rect.width / 2, rect.top + rect.height / 2, 22);
+      }
+    }
+
+    // Briefly pulses a stat value to give satisfying visual feedback when it updates
+    function triggerPop(elementId) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      el.classList.remove('pop');
+      void el.offsetWidth; // force reflow so the animation restarts if triggered again quickly
+      el.classList.add('pop');
+    }
+
+    // ==================== Neon Particle Burst ====================
+    // A lightweight celebration effect for milestones (badge unlocks, logging a
+    // session, finishing a focus timer) — spawns a handful of glowing dots that
+    // fly outward and fade, using the Web Animations API so no extra libraries
+    // or persistent DOM nodes are needed.
+    function celebrate(x, y, count) {
+      const colors = ['#ff2d95', '#00e5ff', '#a742ff', '#ccff00'];
+      const particleCount = count || 30;
+
+      for (let i = 0; i < particleCount; i++) {
+        const el = document.createElement('div');
+        const size = 4 + Math.random() * 6;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+        el.style.position = 'fixed';
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+        el.style.width = size + 'px';
+        el.style.height = size + 'px';
+        el.style.background = color;
+        el.style.borderRadius = '50%';
+        el.style.boxShadow = `0 0 8px ${color}, 0 0 16px ${color}`;
+        el.style.pointerEvents = 'none';
+        el.style.zIndex = '3000';
+        document.body.appendChild(el);
+
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 60 + Math.random() * 160;
+        const dx = Math.cos(angle) * distance;
+        const dy = Math.sin(angle) * distance - 30;
+        const duration = 650 + Math.random() * 550;
+
+        try {
+          const anim = el.animate([
+            { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+            { transform: `translate(${dx}px, ${dy}px) scale(0.2)`, opacity: 0 }
+          ], { duration, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+          anim.onfinish = () => el.remove();
+        } catch (e) {
+          // Web Animations API unavailable — just remove the dot after a delay
+          setTimeout(() => el.remove(), 800);
+        }
+      }
+    }
+
+    // ==================== Institution Functions ====================
+    let editingInstitutionId = null;
+
+    function openAddInstitutionModal() {
+      editingInstitutionId = null;
+      document.querySelectorAll('.workday-check').forEach(cb => cb.checked = false);
+      document.getElementById('institutionName').value = '';
+      document.getElementById('institutionType').value = 'school';
+      document.getElementById('schoolStartTime').value = '09:00';
+      document.getElementById('schoolEndTime').value = '15:00';
+      document.getElementById('institutionTravelTime').value = '20';
+      document.getElementById('institutionModalTitle').innerHTML = '<i class="fas fa-school"></i> Add School/Academy';
+      document.getElementById('institutionSubmitBtn').innerText = 'Add Institution';
+      openModal('addInstitutionModal');
+    }
+
+    function openEditInstitutionModal(id) {
+      const inst = APP_STATE.data.institutions.find(i => i.id === id);
+      if (!inst) return;
+      editingInstitutionId = id;
+      document.querySelectorAll('.workday-check').forEach(cb => {
+        cb.checked = inst.workdays.includes(cb.value);
+      });
+      document.getElementById('institutionName').value = inst.name;
+      document.getElementById('institutionType').value = inst.type;
+      document.getElementById('schoolStartTime').value = inst.startTime;
+      document.getElementById('schoolEndTime').value = inst.endTime;
+      document.getElementById('institutionTravelTime').value = inst.travelMins != null ? inst.travelMins : 20;
+      document.getElementById('institutionModalTitle').innerHTML = '<i class="fas fa-school"></i> Edit School/Academy';
+      document.getElementById('institutionSubmitBtn').innerText = 'Save Changes';
+      openModal('addInstitutionModal');
+    }
+
+    function addInstitution() {
+      const name = document.getElementById('institutionName').value.trim();
+      const type = document.getElementById('institutionType').value;
+      const startTime = document.getElementById('schoolStartTime').value;
+      const endTime = document.getElementById('schoolEndTime').value;
+      const travelMins = Math.max(0, parseInt(document.getElementById('institutionTravelTime').value) || 0);
+      const workdays = Array.from(document.querySelectorAll('.workday-check:checked')).map(cb => cb.value);
+
+      if (!name) {
+        alert('Please enter institution name');
+        return;
+      }
+      if (workdays.length === 0) {
+        alert('Please select at least one working day');
+        return;
+      }
+
+      if (editingInstitutionId !== null) {
+        const inst = APP_STATE.data.institutions.find(i => i.id === editingInstitutionId);
+        if (inst) {
+          inst.name = name;
+          inst.type = type;
+          inst.startTime = startTime;
+          inst.endTime = endTime;
+          inst.travelMins = travelMins;
+          inst.workdays = workdays;
+        }
+        editingInstitutionId = null;
+        saveStateToLocalStorage();
+        renderInstitutions();
+        closeModal('addInstitutionModal');
+        generateTimetable();
+        showLightToast('Nice!', `${name} updated`);
+        return;
+      }
+
+      const institution = {
+        id: Date.now(),
+        name,
+        type,
+        startTime,
+        endTime,
+        travelMins,
+        workdays
+      };
+
+      APP_STATE.data.institutions.push(institution);
+      saveStateToLocalStorage();
+      renderInstitutions();
+      closeModal('addInstitutionModal');
+      generateTimetable();
+      showLightToast('Nice!', `${name} added to your schedule`);
+    }
+
+    function removeInstitution(id) {
+      APP_STATE.data.institutions = APP_STATE.data.institutions.filter(inst => inst.id !== id);
+      saveStateToLocalStorage();
+      renderInstitutions();
+      if (APP_STATE.data.institutions.length > 0) {
+        generateTimetable();
+      } else {
+        document.getElementById('generatedScheduleContainer').style.display = 'none';
+        document.getElementById('noScheduleMessage').style.display = 'block';
+        document.getElementById('regenerateBtn').style.display = 'none';
+      }
+    }
+
+    function renderInstitutions() {
+      const container = document.getElementById('institutionsList');
+      if (APP_STATE.data.institutions.length === 0) {
+        container.innerHTML = '<div class="info-box">No institutions added yet. Click the button below to add your school or academy.</div>';
+        return;
+      }
+
+      container.innerHTML = APP_STATE.data.institutions.map(inst => `
+        <div class="institution-card">
+          <div class="institution-header">
+            <div>
+              <div class="institution-name">📚 ${inst.name}</div>
+              <div class="institution-time">${inst.type.toUpperCase()} • ${formatTime(inst.startTime)} - ${formatTime(inst.endTime)}</div>
+              <small style="color: var(--text-dim); font-family: var(--font-mono); display: block; margin-top: 4px;">Working Days: ${inst.workdays.join(', ')}</small>
+              <small style="color: ${inst.travelMins != null ? 'var(--text-dim)' : 'var(--neon-pink)'}; font-family: var(--font-mono); display: block; margin-top: 2px;">🚗 ${inst.travelMins != null ? inst.travelMins : 0} min travel each way${inst.travelMins == null ? ' — click Edit to set this' : ''}</small>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <button onclick="openEditInstitutionModal(${inst.id})">
+                <i class="fas fa-pen"></i> Edit
+              </button>
+              <button class="remove-btn" onclick="removeInstitution(${inst.id})">
+                <i class="fas fa-trash"></i> Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ==================== Generate Timetable Function ====================
+    // Returns true if [startMins, startMins+durationMins) overlaps any existing item.
+    // Times are treated on a 0-1440 axis; a second "day" (1440-2880) is appended so
+    // that sleep windows crossing midnight can be checked correctly.
+    function hasConflict(items, startMins, durationMins) {
+      const endMins = startMins + durationMins;
+      return items.some(it => {
+        const itEnd = it.startMins + it.durationMins;
+        return startMins < itEnd && endMins > it.startMins;
+      });
+    }
+
+    // Finds the first free gap of at least `neededMins` within [dayStart, dayEnd),
+    // searching candidate start points just after each existing item (and at dayStart).
+    // If `deadline` is given, the slot must END by that time (e.g. breakfast must
+    // finish before school starts) — later candidates are excluded entirely.
+    function findFreeSlot(items, neededMins, dayStart, dayEnd, preferredStart, deadline) {
+      const effectiveEnd = deadline !== undefined ? Math.min(dayEnd, deadline) : dayEnd;
+
+      const candidates = [dayStart, ...items.map(it => it.startMins + it.durationMins)]
+        .filter(t => t >= dayStart && t + neededMins <= effectiveEnd)
+        .sort((a, b) => a - b);
+
+      // Prefer a candidate close to the preferred time if it's conflict-free
+      if (preferredStart !== undefined &&
+          preferredStart >= dayStart &&
+          preferredStart + neededMins <= effectiveEnd &&
+          !hasConflict(items, preferredStart, neededMins)) {
+        return preferredStart;
+      }
+
+      for (const start of candidates) {
+        if (!hasConflict(items, start, neededMins)) {
+          return start;
+        }
+      }
+      return null; // no room found
+    }
+
+    // Returns every free gap within [dayStart, dayEnd), in chronological order.
+    // Used for activities (like study) that can be split across multiple sittings
+    // instead of needing one single unbroken block.
+    function findAllFreeGaps(items, dayStart, dayEnd) {
+      const sorted = [...items].sort((a, b) => a.startMins - b.startMins);
+      const gaps = [];
+      let cursor = dayStart;
+      sorted.forEach(it => {
+        const itStart = Math.max(it.startMins, dayStart);
+        const itEnd = it.startMins + it.durationMins;
+        if (itStart > cursor) {
+          gaps.push({ start: cursor, end: Math.min(itStart, dayEnd) });
+        }
+        cursor = Math.max(cursor, itEnd);
+      });
+      if (cursor < dayEnd) gaps.push({ start: cursor, end: dayEnd });
+      return gaps.filter(g => g.end > g.start);
+    }
+
+    // Builds one day's schedule as a pure function (no APP_STATE writes) so it can be
+    // reused both by the real generator and by the Smart Fit Assistant's live preview.
+    //
+    // Strategy: sleep + academy are fixed and non-negotiable. Everything else is
+    // "flexible" and has an ideal duration and a minimum viable duration. If the day
+    // doesn't have room for everything at ideal length, we trim the LEAST important
+    // things first (free time, then dinner/lunch, then breakfast/morning routine) down
+    // to their minimums before ever touching study time. Only if the day still doesn't
+    // have room after every other trim do we reduce study time itself — and we report
+    // exactly how far short it fell, so the app can flag it instead of silently failing.
+    function buildDaySchedule(day, wakeMins, sleepMins, studyTargetMins, institutions) {
+      const items = [];
+
+      // Sleep (ends at wake time; a negative start just means it began before midnight)
+      const sleepStartMins = wakeMins - sleepMins;
+      items.push({ activity: '😴 Sleep', startMins: sleepStartMins, durationMins: sleepMins, fixed: true });
+
+      const dayStart = wakeMins;
+      const dayEnd = wakeMins + (24 * 60 - sleepMins);
+      let blockedMinutesInRange = 0;
+      let earliestDeparture = null; // the time you must be OUT THE DOOR, accounting for commute
+
+      institutions.forEach(inst => {
+        if (inst.workdays.includes(day)) {
+          const [startH, startM] = inst.startTime.split(':').map(Number);
+          const [endH, endM] = inst.endTime.split(':').map(Number);
+          let startMins = startH * 60 + startM;
+          let endMins = endH * 60 + endM;
+          if (endMins <= startMins) endMins += 24 * 60; // overnight academy
+          const travelMins = Math.max(0, inst.travelMins || 0);
+
+          items.push({ activity: `🏫 ${inst.name}`, startMins, durationMins: endMins - startMins, fixed: true });
+
+          if (travelMins > 0) {
+            items.push({ activity: `🚗 Commute to ${inst.name}`, startMins: startMins - travelMins, durationMins: travelMins, fixed: true });
+            items.push({ activity: `🚗 Commute back from ${inst.name}`, startMins: endMins, durationMins: travelMins, fixed: true });
+          }
+
+          const departureMins = startMins - travelMins;
+          if (earliestDeparture === null || departureMins < earliestDeparture) {
+            earliestDeparture = departureMins;
+          }
+        }
+      });
+
+      // Total blocked time (school + commute both ways) that falls inside the waking window
+      items.forEach(it => {
+        if (it.fixed && it.activity !== '😴 Sleep') {
+          const overlapStart = Math.max(it.startMins, dayStart);
+          const overlapEnd = Math.min(it.startMins + it.durationMins, dayEnd);
+          if (overlapEnd > overlapStart) blockedMinutesInRange += (overlapEnd - overlapStart);
+        }
+      });
+
+      const freeMinutesTotal = Math.max(0, (dayEnd - dayStart) - blockedMinutesInRange);
+
+      // Trim order: index 0 gets shrunk first (most flexible), study is always last.
+      const specs = [
+        { key: 'freetime', activity: '🎮 Free Time/Recreation', ideal: 60, min: 0, preferredStart: 17 * 60 },
+        { key: 'dinner', activity: '🍜 Dinner', ideal: 45, min: 20, preferredStart: 19 * 60 },
+        { key: 'lunch', activity: '🍽️ Lunch & Break', ideal: 60, min: 25, preferredStart: 13 * 60 },
+        { key: 'breakfast', activity: '🍳 Breakfast', ideal: 30, min: 15, preferredStart: wakeMins + 60, beforeSchool: true },
+        { key: 'morning', activity: '🌅 Morning Routine', ideal: 60, min: 20, preferredStart: wakeMins, beforeSchool: true },
+        { key: 'study', activity: '📚 Personal Study/Homework', ideal: studyTargetMins, min: studyTargetMins, preferredStart: 20 * 60 }
+      ];
+
+      const actual = {};
+      specs.forEach(s => { actual[s.key] = s.ideal; });
+
+      let shortfall = specs.reduce((sum, s) => sum + s.ideal, 0) - freeMinutesTotal;
+
+      if (shortfall > 0) {
+        for (const s of specs) {
+          if (shortfall <= 0) break;
+          const reducible = actual[s.key] - s.min;
+          if (reducible <= 0) continue;
+          const reduceBy = Math.min(reducible, shortfall);
+          actual[s.key] -= reduceBy;
+          shortfall -= reduceBy;
+        }
+      }
+
+      // Only reached if even every non-study minimum plus zero free time still doesn't fit
+      let studyShortfallMins = 0;
+      if (shortfall > 0) {
+        const cut = Math.min(actual.study, shortfall);
+        actual.study -= cut;
+        studyShortfallMins = cut;
+        shortfall -= cut;
+      }
+
+      const singleBlockOrder = ['morning', 'breakfast', 'lunch', 'freetime', 'dinner'];
+      const conflicts = [];
+      const trimmedList = [];
+
+      singleBlockOrder.forEach(key => {
+        const spec = specs.find(s => s.key === key);
+        const duration = actual[key];
+        if (duration <= 0) {
+          if (spec.ideal > 0) trimmedList.push(`${spec.activity} was skipped today to make room for study time.`);
+          return;
+        }
+
+        const deadline = spec.beforeSchool && earliestDeparture !== null ? Math.max(dayStart, earliestDeparture) : undefined;
+        let slot = findFreeSlot(items, duration, dayStart, dayEnd, spec.preferredStart, deadline);
+        let missedDeadline = false;
+
+        if (slot === null && deadline !== undefined) {
+          // Couldn't fit before school even with everything else already placed —
+          // fall back to placing it later in the day, but flag it so it's obvious.
+          slot = findFreeSlot(items, duration, dayStart, dayEnd, spec.preferredStart);
+          missedDeadline = slot !== null;
+        }
+
+        if (slot !== null) {
+          items.push({ activity: spec.activity, startMins: slot, durationMins: duration, fixed: false });
+          if (duration < spec.ideal) {
+            trimmedList.push(`${spec.activity} trimmed from ${(spec.ideal / 60).toFixed(1)}h to ${(duration / 60).toFixed(1)}h to fit your day.`);
+          }
+          if (missedDeadline) {
+            trimmedList.push(`${spec.activity} couldn't fit before you need to leave today, so it was moved later — consider waking up a bit earlier.`);
+          }
+        } else {
+          conflicts.push(`Couldn't place "${spec.activity}" (${(duration / 60).toFixed(1)}h) — today's schedule is too fragmented to fit it anywhere.`);
+        }
+      });
+
+      // Study time doesn't need one unbroken block — real study happens in sessions.
+      // Fill whatever free gaps remain, in time order, until the target is met.
+      const studySpec = specs.find(s => s.key === 'study');
+      let studyNeeded = actual.study;
+      if (studyNeeded > 0) {
+        const gaps = findAllFreeGaps(items, dayStart, dayEnd);
+        const sessions = [];
+        for (const gap of gaps) {
+          if (studyNeeded <= 0) break;
+          const gapLen = gap.end - gap.start;
+          const use = Math.min(gapLen, studyNeeded);
+          if (use > 0) {
+            sessions.push({ start: gap.start, durationMins: use });
+            studyNeeded -= use;
+          }
+        }
+        sessions.forEach((s, idx) => {
+          const label = sessions.length > 1 ? `📚 Study Session ${idx + 1}` : studySpec.activity;
+          items.push({ activity: label, startMins: s.start, durationMins: s.durationMins, fixed: false });
+        });
+        if (sessions.length > 1) {
+          trimmedList.push(`Study time was split into ${sessions.length} sessions across free gaps in your day.`);
+        }
+        if (studyNeeded > 0) {
+          conflicts.push(`Only fit ${((actual.study - studyNeeded) / 60).toFixed(1)}h of ${(actual.study / 60).toFixed(1)}h of study time — no free gaps left today.`);
+        }
+      }
+
+      return { items, conflicts, trimmedList, studyIdealMins: studyTargetMins, studyActualMins: actual.study, studyShortfallMins, freeMinutesTotal };
+    }
+
+    function generateTimetable() {
+      if (APP_STATE.data.institutions.length === 0) {
+        document.getElementById('generatedScheduleContainer').style.display = 'none';
+        document.getElementById('noScheduleMessage').style.display = 'block';
+        document.getElementById('regenerateBtn').style.display = 'none';
+        document.getElementById('smartFitBanner').style.display = 'none';
+        return;
+      }
+
+      const schedule = {};
+      const conflicts = {};
+      const trims = {};
+      const studyShortfalls = {};
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+      const wakeTimeStr = APP_STATE.data.preferences.wakeTime;
+      const [wakeH, wakeM] = wakeTimeStr.split(':').map(Number);
+      const wakeMins = wakeH * 60 + wakeM;
+      const sleepMins = APP_STATE.data.preferences.sleepHours * 60;
+
+      days.forEach(day => {
+        // Respect the per-day study hours set in "Edit Weekly Schedule" if present,
+        // falling back to the flat daily target otherwise.
+        const dayTargetHours = (APP_STATE.data.timetable[day] && APP_STATE.data.timetable[day].studyHours != null)
+          ? APP_STATE.data.timetable[day].studyHours
+          : APP_STATE.data.preferences.studyTarget;
+        const studyTargetMins = dayTargetHours * 60;
+
+        const result = buildDaySchedule(day, wakeMins, sleepMins, studyTargetMins, APP_STATE.data.institutions);
+        schedule[day] = result.items;
+        conflicts[day] = result.conflicts;
+        trims[day] = result.trimmedList;
+        studyShortfalls[day] = result.studyShortfallMins;
+      });
+
+      APP_STATE.generatedSchedule = schedule;
+      APP_STATE.scheduleConflicts = conflicts;
+      APP_STATE.scheduleTrims = trims;
+      APP_STATE.studyShortfalls = studyShortfalls;
+      saveStateToLocalStorage();
+      renderGeneratedSchedule(schedule, conflicts, trims, studyShortfalls);
+    }
+
+    function renderGeneratedSchedule(schedule, conflicts, trims, studyShortfalls) {
+      const container = document.getElementById('generatedScheduleContainer');
+      const banner = document.getElementById('smartFitBanner');
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+      const shortDays = days.filter(d => (studyShortfalls[d] || 0) > 0);
+      if (shortDays.length > 0) {
+        const list = shortDays.map(d => `${d} (short by ${(studyShortfalls[d] / 60).toFixed(1)}h)`).join(', ');
+        banner.innerHTML = `
+          <div class="info-box" style="background: rgba(255, 45, 149, 0.12); border-left-color: var(--neon-pink);">
+            <strong>⚠️ Your full study target doesn't fit on: ${list}.</strong><br>
+            Everything else has already been trimmed to its minimum. Open the Smart Fit Assistant to adjust your wake time, sleep hours, or study target until it fits.
+          </div>
+          <button style="margin-top: 10px; width: 100%;" onclick="openSmartFitModal()">
+            <i class="fas fa-wand-magic-sparkles"></i> Open Smart Fit Assistant
+          </button>
+        `;
+        banner.style.display = 'block';
+      } else {
+        banner.style.display = 'none';
+        banner.innerHTML = '';
+      }
+
+      let html = '<div style="margin-top: 20px;">';
+
+      days.forEach(day => {
+        const daySchedule = schedule[day];
+        daySchedule.sort((a, b) => a.startMins - b.startMins);
+
+        html += `
+          <div style="margin-bottom: 30px; padding: 15px; background: rgba(8, 3, 16, 0.55); border: 1px solid rgba(167, 66, 255, 0.2); border-radius: 8px;">
+            <h3 style="color: var(--neon-cyan); margin-bottom: 15px; font-family: var(--font-head); text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 0 6px rgba(0, 229, 255, 0.4);">📅 ${day}</h3>
+        `;
+
+        const dayConflicts = (conflicts && conflicts[day]) || [];
+        if (dayConflicts.length > 0) {
+          html += `
+            <div style="background: rgba(255, 45, 149, 0.1); border-left: 4px solid var(--neon-pink); padding: 10px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 13px; color: var(--text-light);">
+              ⚠️ ${dayConflicts.join('<br>⚠️ ')}
+            </div>
+          `;
+        }
+
+        const dayTrims = (trims && trims[day]) || [];
+        if (dayTrims.length > 0) {
+          html += `
+            <div style="background: rgba(0, 229, 255, 0.08); border-left: 4px solid var(--neon-cyan); padding: 10px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 12px; color: var(--text-dim);">
+              ℹ️ ${dayTrims.join('<br>ℹ️ ')}
+            </div>
+          `;
+        }
+
+        daySchedule.forEach(item => {
+          const dh = Math.floor(item.durationMins / 60);
+          const dm = item.durationMins % 60;
+          const startTime = formatMinsAMPM(item.startMins);
+          const duration = dh > 0 ? `${dh}h ${dm}m` : `${dm}m`;
+
+          html += `
+            <div class="schedule-item">
+              <span class="schedule-time">${startTime}</span>
+              <span class="schedule-activity">${item.activity}</span>
+              <span class="schedule-duration">${duration}</span>
+            </div>
+          `;
+        });
+
+        html += '</div>';
+      });
+
+      html += '</div>';
+
+      container.innerHTML = html;
+      container.style.display = 'block';
+      document.getElementById('noScheduleMessage').style.display = 'none';
+      document.getElementById('regenerateBtn').style.display = 'inline-flex';
+    }
+
+    // ==================== Smart Fit Assistant ====================
+    function openSmartFitModal() {
+      document.getElementById('fitWakeTime').value = APP_STATE.data.preferences.wakeTime;
+      document.getElementById('fitSleepHours').value = APP_STATE.data.preferences.sleepHours;
+      document.getElementById('fitStudyTarget').value = APP_STATE.data.preferences.studyTarget;
+      updateSmartFitPreview();
+      openModal('smartFitModal');
+    }
+
+    function updateSmartFitPreview() {
+      const wakeStr = document.getElementById('fitWakeTime').value || APP_STATE.data.preferences.wakeTime;
+      const sleepH = parseFloat(document.getElementById('fitSleepHours').value);
+      const studyH = parseFloat(document.getElementById('fitStudyTarget').value);
+      const summaryEl = document.getElementById('smartFitSummary');
+      const listEl = document.getElementById('fitPreviewList');
+
+      if (!wakeStr || isNaN(sleepH) || isNaN(studyH) || sleepH <= 0 || studyH < 0) {
+        summaryEl.innerHTML = 'Fill in all three fields to see a live preview.';
+        listEl.innerHTML = '';
+        return;
+      }
+
+      const [wh, wm] = wakeStr.split(':').map(Number);
+      const wakeMins = wh * 60 + wm;
+      const sleepMins = sleepH * 60;
+      const studyMins = studyH * 60;
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+      let allFit = true;
+      let rows = '';
+      days.forEach(day => {
+        const result = buildDaySchedule(day, wakeMins, sleepMins, studyMins, APP_STATE.data.institutions);
+        const fits = result.studyShortfallMins === 0;
+        if (!fits) allFit = false;
+        rows += `
+          <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; font-family: var(--font-mono); color: ${fits ? 'var(--neon-acid)' : 'var(--neon-pink)'};">
+            <span>${day}</span>
+            <span>${fits ? '✓ Fits' : '⚠ Short ' + (result.studyShortfallMins / 60).toFixed(1) + 'h'}</span>
+          </div>
+        `;
+      });
+
+      listEl.innerHTML = rows;
+      summaryEl.innerHTML = allFit
+        ? '✅ Great — your full study target fits every day with these settings.'
+        : '⚠️ Some days still fall short with these settings. Keep adjusting — the preview updates live. Avoid dropping sleep below 6-7 hours.';
+
+      if (sleepH < 6) {
+        summaryEl.innerHTML += '<br>😴 Heads up: under 6 hours of sleep isn\'t recommended, even to hit a study goal.';
+      }
+    }
+
+    function applySmartFit() {
+      const wakeStr = document.getElementById('fitWakeTime').value;
+      const sleepH = parseFloat(document.getElementById('fitSleepHours').value);
+      const studyH = parseFloat(document.getElementById('fitStudyTarget').value);
+
+      if (!wakeStr || isNaN(sleepH) || isNaN(studyH) || sleepH <= 0 || studyH < 0) {
+        alert('Please fill in a valid wake time, sleep hours, and study target.');
+        return;
+      }
+
+      APP_STATE.data.preferences.wakeTime = wakeStr;
+      APP_STATE.data.preferences.sleepHours = sleepH;
+      APP_STATE.data.preferences.studyTarget = studyH;
+
+      // Apply the new target across every day so it stays consistent with the generator
+      ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].forEach(day => {
+        APP_STATE.data.timetable[day].studyHours = studyH;
+      });
+
+      updateUI();
+      closeModal('smartFitModal');
+      generateTimetable();
+      showLightToast('Nice!', 'Smart Fit applied to your schedule');
+    }
+
+    // ==================== Focus Timer Functions ====================
+    function toggleFocusMode() {
+      const overlay = document.getElementById('focusOverlay');
+      overlay.classList.toggle('hidden');
+      if (!overlay.classList.contains('hidden')) {
+        startFocusTimer(APP_STATE.data.preferences.sessionLength * 60);
+      } else {
+        clearInterval(APP_STATE.focusTimer.timerId);
+      }
+    }
+
+    function startFocusTimer(sec) {
+      clearInterval(APP_STATE.focusTimer.timerId);
+      APP_STATE.focusTimer.secondsLeft = sec;
+      APP_STATE.focusTimer.isPaused = false;
+      updateFocusDisplay();
+      APP_STATE.focusTimer.timerId = setInterval(() => {
+        if (!APP_STATE.focusTimer.isPaused) {
+          APP_STATE.focusTimer.secondsLeft--;
+          updateFocusDisplay();
+          if (APP_STATE.focusTimer.secondsLeft <= 0) {
+            clearInterval(APP_STATE.focusTimer.timerId);
+            celebrate(window.innerWidth / 2, window.innerHeight / 2, 45);
+            toggleFocusMode();
+            addStudyHour();
+          }
+        }
+      }, 1000);
+    }
+
+    function toggleFocusTimer() {
+      APP_STATE.focusTimer.isPaused = !APP_STATE.focusTimer.isPaused;
+      document.getElementById('focusPlayIcon').className = APP_STATE.focusTimer.isPaused ? 'fas fa-play' : 'fas fa-pause';
+    }
+
+    function updateFocusDisplay() {
+      const m = Math.floor(APP_STATE.focusTimer.secondsLeft / 60), s = APP_STATE.focusTimer.secondsLeft % 60;
+      document.getElementById('focusTimerDisplay').innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    // ==================== Study Tracking ====================
+    function addStudyHour() {
+      APP_STATE.todayHours++;
+      APP_STATE.bestDayHours = Math.max(APP_STATE.bestDayHours, APP_STATE.todayHours);
+
+      const now = new Date();
+      const currentMins = now.getHours() * 60 + now.getMinutes();
+      if (currentMins >= 22 * 60 || currentMins < 4 * 60) {
+        APP_STATE.lastSessionWasLate = true;
+      }
+
+      if (APP_STATE.data.preferences.sleepHours >= 7) {
+        APP_STATE.wellRestedStreak++;
+      } else {
+        APP_STATE.wellRestedStreak = 0;
+      }
+
+      updateUI();
+      triggerPop('todayHours');
+      showLightToast('Good Work, Keep It Up Champ!', `${APP_STATE.todayHours} hr${APP_STATE.todayHours !== 1 ? 's' : ''} studied today`);
+    }
+
+    function logTodaySession(evt) {
+      const finishedStreak = APP_STATE.streak + 1;
+      APP_STATE.streak = finishedStreak;
+      APP_STATE.todayHours = 0;
+      updateUI();
+      triggerPop('streakDisplay');
+      if (evt) {
+        celebrate(evt.clientX, evt.clientY, 35);
+      }
+      showLightToast('Good Work, Keep It Up Champ!', `🔥 Streak: ${finishedStreak} day${finishedStreak !== 1 ? 's' : ''}`);
+    }
+
+    // ==================== Settings Functions ====================
+    function openSettingsModal() {
+      document.getElementById('modalStudyTarget').value = APP_STATE.data.preferences.studyTarget;
+      document.getElementById('modalWakeTime').value = APP_STATE.data.preferences.wakeTime;
+      document.getElementById('modalSessionLength').value = APP_STATE.data.preferences.sessionLength;
+      openModal('settingsModal');
+    }
+
+    // Applies a flat daily study target to every day's per-day value, so the
+    // generator (which reads per-day targets) stays consistent with the simple
+    // "one number" settings the person sees on the Dashboard/Settings.
+    function syncStudyTargetToAllDays(hours) {
+      ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].forEach(day => {
+        APP_STATE.data.timetable[day].studyHours = hours;
+      });
+    }
+
+    function saveSettingsModal() {
+      const target = parseInt(document.getElementById('modalStudyTarget').value);
+      APP_STATE.data.preferences.studyTarget = target;
+      APP_STATE.data.preferences.wakeTime = document.getElementById('modalWakeTime').value;
+      APP_STATE.data.preferences.sessionLength = parseInt(document.getElementById('modalSessionLength').value);
+      syncStudyTargetToAllDays(target);
+      updateUI();
+      if (APP_STATE.data.institutions.length > 0) {
+        generateTimetable();
+      }
+      closeModal('settingsModal');
+      showLightToast('Nice!', 'Settings saved');
+    }
+
+    function savePreferences() {
+      APP_STATE.data.preferences.wakeTime = document.getElementById('wakeTimeInput').value;
+      APP_STATE.data.preferences.sessionLength = parseInt(document.getElementById('sessionLengthInput').value);
+      updateUI();
+      if (APP_STATE.data.institutions.length > 0) {
+        generateTimetable();
+      }
+      showLightToast('Nice!', 'Preferences saved');
+    }
+
+    function updateStudyTarget() {
+      const target = parseInt(document.getElementById('studyTargetInput').value);
+      APP_STATE.data.preferences.studyTarget = target;
+      syncStudyTargetToAllDays(target);
+      updateUI();
+      if (APP_STATE.data.institutions.length > 0) {
+        generateTimetable();
+      }
+      showLightToast('Nice!', 'Study target updated');
+    }
+
+    // ==================== Timetable Functions ====================
+    function openTimetableModal() {
+      document.getElementById('monInput').value = APP_STATE.data.timetable.Mon.studyHours;
+      document.getElementById('tueInput').value = APP_STATE.data.timetable.Tue.studyHours;
+      document.getElementById('wedInput').value = APP_STATE.data.timetable.Wed.studyHours;
+      document.getElementById('thuInput').value = APP_STATE.data.timetable.Thu.studyHours;
+      document.getElementById('friInput').value = APP_STATE.data.timetable.Fri.studyHours;
+      document.getElementById('satInput').value = APP_STATE.data.timetable.Sat.studyHours;
+      document.getElementById('sunInput').value = APP_STATE.data.timetable.Sun.studyHours;
+      openModal('timetableModal');
+    }
+
+    function saveTimetable() {
+      APP_STATE.data.timetable.Mon.studyHours = parseFloat(document.getElementById('monInput').value);
+      APP_STATE.data.timetable.Tue.studyHours = parseFloat(document.getElementById('tueInput').value);
+      APP_STATE.data.timetable.Wed.studyHours = parseFloat(document.getElementById('wedInput').value);
+      APP_STATE.data.timetable.Thu.studyHours = parseFloat(document.getElementById('thuInput').value);
+      APP_STATE.data.timetable.Fri.studyHours = parseFloat(document.getElementById('friInput').value);
+      APP_STATE.data.timetable.Sat.studyHours = parseFloat(document.getElementById('satInput').value);
+      APP_STATE.data.timetable.Sun.studyHours = parseFloat(document.getElementById('sunInput').value);
+      updateUI();
+      closeModal('timetableModal');
+      showLightToast('Nice!', 'Weekly schedule updated');
+    }
+
+    // ==================== Storage Functions ====================
+    function saveStateToLocalStorage() {
+      localStorage.setItem('timepilot_data', JSON.stringify(APP_STATE));
+    }
+
+    function loadStateFromLocalStorage() {
+      const saved = localStorage.getItem('timepilot_data');
+      if (saved) {
+        const loaded = JSON.parse(saved);
+        APP_STATE.data = loaded.data || APP_STATE.data;
+        APP_STATE.streak = loaded.streak || 0;
+        APP_STATE.todayHours = loaded.todayHours || 0;
+        APP_STATE.generatedTimetable = loaded.generatedTimetable || APP_STATE.generatedTimetable;
+        APP_STATE.generatedSchedule = loaded.generatedSchedule || null;
+        APP_STATE.bestDayHours = loaded.bestDayHours || 0;
+        APP_STATE.wellRestedStreak = loaded.wellRestedStreak || 0;
+        APP_STATE.lastSessionWasLate = loaded.lastSessionWasLate || false;
+        APP_STATE.scheduleConflicts = loaded.scheduleConflicts || {};
+        APP_STATE.scheduleTrims = loaded.scheduleTrims || {};
+        APP_STATE.studyShortfalls = loaded.studyShortfalls || {};
+      }
+    }
+
+    // ==================== Modal Functions ====================
+    function openModal(modalId) {
+      document.getElementById(modalId).classList.add('show');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('show');
+    }
+
+    // Close modal on background click
+    document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal')) {
+        e.target.classList.remove('show');
+      }
+    });
+
+    // ==================== Export Functions ====================
+    function triggerPrintPDF() {
+      window.print();
+    }
+  </script>
+</body>
+</html>
